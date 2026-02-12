@@ -3,8 +3,11 @@
 When a heartbeat fires, check these in order. Only report items that need attention. If nothing needs attention, reply HEARTBEAT_OK.
 
 ## 1. Daily Standup (morning heartbeats, 7:00-9:00)
+- Check unread email count via `python3 ~/.openclaw/workspace/skills/google-workspace/scripts/gmail.py inbox '{"max": 5, "unread_only": true}'`
+- Check today's calendar via `python3 ~/.openclaw/workspace/skills/google-workspace/scripts/gcalendar.py today`
 - Check the Notion Tasks database for overdue or due-today tasks
 - Check the Notion Projects database for active projects with approaching target dates
+- Include email summary (unread count, top senders) and today's schedule in the morning report
 - Summarize what's on the plate for today
 
 ## 2. Memory Sync (all heartbeats)

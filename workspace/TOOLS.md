@@ -41,6 +41,24 @@ notion-create-pages with:
   content: formatted markdown
 ```
 
+## Google Workspace
+
+Scripts at: `~/.openclaw/workspace/skills/google-workspace/scripts/`
+
+### Gmail
+```bash
+python3 ~/.openclaw/workspace/skills/google-workspace/scripts/gmail.py <command> '<json>'
+```
+Commands: `inbox`, `search`, `read`, `send`, `reply`
+
+### Calendar
+```bash
+python3 ~/.openclaw/workspace/skills/google-workspace/scripts/gcalendar.py <command> '<json>'
+```
+Commands: `today`, `upcoming`, `search`, `create`
+
+Credentials: Loaded from `~/.openclaw/.env` (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN)
+
 ## Memory Recall Workflow
 
 ### For broad knowledge questions
