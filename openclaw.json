@@ -1,35 +1,53 @@
 {
-  // OpenClaw Configuration — Second Brain Assistant
-  // Config reference: https://openclaw.ai/docs/reference/config
-
-  // ── Model Providers ──────────────────────────────────────────────────
+  "meta": {
+    "lastTouchedVersion": "2026.2.10",
+    "lastTouchedAt": "2026-02-12T04:28:52.351Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-02-12T04:07:57.730Z",
+    "lastRunVersion": "2026.2.10",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local"
+  },
+  "logging": {
+    "level": "info",
+    "redactSensitive": "tools"
+  },
   "models": {
     "providers": {
       "ollama": {
         "baseUrl": "http://10.0.254.23:11434/v1",
         "api": "openai-completions",
-        // Models are auto-discovered from Ollama server
         "models": []
       }
     }
   },
-
-  // ── Agent Defaults ───────────────────────────────────────────────────
   "agents": {
     "defaults": {
-      // Claude CLI is the primary model (uses Max subscription)
       "model": {
         "primary": "claude-cli/opus",
-        "fallbacks": ["claude-cli/sonnet"]
+        "fallbacks": [
+          "claude-cli/sonnet"
+        ]
       },
-      // Working directory
-      "workspace": "~/.openclaw/workspace",
-      // Timezone
+      "workspace": "/Users/wayneerikson/.openclaw/workspace",
       "userTimezone": "America/Chicago",
       "timeFormat": "12",
-      // Thinking
+      "contextTokens": 200000,
+      "cliBackends": {
+        "claude-cli": {
+          "command": "claude",
+          "serialize": true
+        }
+      },
+      "compaction": {
+        "mode": "safeguard",
+        "memoryFlush": {
+          "enabled": true,
+          "prompt": "Write a comprehensive memory file capturing the key information from this conversation. Include:\n\n1. **Decisions made** — what was decided and why\n2. **Key learnings** — technical insights, solutions found, patterns discovered\n3. **Context** — project names, file paths, tool configurations discussed\n4. **Action items** — anything that needs follow-up\n5. **People & references** — names, links, resources mentioned\n\nFormat with clear markdown headings. Be thorough — this file is the bridge between sessions.\n\nAt the end of the file, add this sync marker on its own line:\n\n<!-- unsynced -->\n\nThis tells the heartbeat system to sync this memory to Notion."
+        }
+      },
       "thinkingDefault": "medium",
-      // Heartbeat — runs every 30 minutes during active hours
       "heartbeat": {
         "every": "30m",
         "activeHours": {
@@ -41,56 +59,60 @@
         "session": "main",
         "target": "last"
       },
-      // CLI backends — claude-cli is built-in, just override if needed
-      "cliBackends": {
-        "claude-cli": {
-          "command": "claude",
-          "serialize": true
-        }
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
       },
-      // Context management
-      "contextTokens": 200000,
-      "compaction": {
-        "mode": "safeguard",
-        "memoryFlush": {
-          "enabled": true,
-          "prompt": "Write a comprehensive memory file capturing the key information from this conversation. Include:\n\n1. **Decisions made** — what was decided and why\n2. **Key learnings** — technical insights, solutions found, patterns discovered\n3. **Context** — project names, file paths, tool configurations discussed\n4. **Action items** — anything that needs follow-up\n5. **People & references** — names, links, resources mentioned\n\nFormat with clear markdown headings. Be thorough — this file is the bridge between sessions.\n\nAt the end of the file, add this sync marker on its own line:\n\n<!-- unsynced -->\n\nThis tells the heartbeat system to sync this memory to Notion."
-        }
-      },
-      // Sandbox for non-main sessions
       "sandbox": {
         "mode": "non-main",
         "workspaceAccess": "ro"
       }
     }
   },
-
-  // ── Channels ─────────────────────────────────────────────────────────
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto"
+  },
   "channels": {
     "slack": {
-      "enabled": false,
       "mode": "socket",
-      // Tokens loaded from env: SLACK_BOT_TOKEN, SLACK_APP_TOKEN
+      "webhookPath": "/slack/events",
+      "enabled": true,
+      "userTokenReadOnly": true,
       "requireMention": false,
       "groupPolicy": "allowlist",
-      "dm": {
-        "enabled": true,
-        "policy": "open",
-        "allowFrom": ["*"]
-      },
-      "blockStreaming": true,
       "historyLimit": 50,
       "dmHistoryLimit": 100,
+      "blockStreaming": true,
       "reactionNotifications": "own",
       "actions": {
         "reactions": true,
         "messages": true,
         "search": true
+      },
+      "dm": {
+        "enabled": true,
+        "policy": "open",
+        "allowFrom": [
+          "*"
+        ]
       }
     }
   },
-
-  // ── Skills ───────────────────────────────────────────────────────────
+  "gateway": {
+    "port": 3377,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token"
+    }
+  },
+  "memory": {
+    "backend": "builtin"
+  },
   "skills": {
     "load": {
       "extraDirs": [
@@ -99,24 +121,11 @@
       "watch": true
     }
   },
-
-  // ── Gateway ──────────────────────────────────────────────────────────
-  "gateway": {
-    "port": 3377,
-    "bind": "loopback",
-    "auth": {
-      "mode": "token"
-      // Token loaded from env: OPENCLAW_GATEWAY_TOKEN
+  "plugins": {
+    "entries": {
+      "slack": {
+        "enabled": true
+      }
     }
-  },
-
-  // ── Memory ───────────────────────────────────────────────────────────
-  "memory": {
-    "backend": "builtin"
-  },
-
-  // ── Logging ──────────────────────────────────────────────────────────
-  "logging": {
-    "level": "info"
   }
 }
