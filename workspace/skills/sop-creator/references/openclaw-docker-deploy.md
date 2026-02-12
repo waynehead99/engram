@@ -1,11 +1,10 @@
 # How to Deploy Engram on Proxmox LXC via Portainer
 
-> **TL;DR:** Build the custom Engram Docker image, deploy it as a Portainer stack on your Proxmox LXC, and verify Slack connectivity.
+> **TL;DR:** Point Portainer at the `waynehead99/engram` GitHub repo, copy config/workspace to the LXC, set env vars, and deploy.
 
 ## Definition of Done
 
-You're done when:
-- [ ] Engram gateway container is running in Portainer (green/healthy)
+- [ ] Engram container is running in Portainer (green/healthy)
 - [ ] `http://<LXC-IP>:18789/` loads the Control UI
 - [ ] Slack responds to a test message within 30 seconds
 - [ ] Heartbeat fires on schedule (check after 30 minutes)
@@ -15,91 +14,58 @@ You're done when:
 
 - [ ] Proxmox LXC container running (Ubuntu 22.04+ or Debian 12+)
 - [ ] Docker Engine installed on the LXC (`docker --version` returns 24+)
-- [ ] Portainer agent or Portainer CE accessible for this LXC
-- [ ] Network: LXC can reach the internet (for Slack, Claude API, Google APIs)
+- [ ] Portainer CE accessible for this LXC
+- [ ] Network: LXC can reach the internet (GitHub, Slack API, Claude API, Google APIs)
 - [ ] Network: your workstation can reach `<LXC-IP>:18789`
-- [ ] Files from macOS `~/.openclaw/` ready to copy (config + workspace)
-- [ ] Claude AI session key (`claude auth status` on macOS, copy the session key)
-- [ ] OpenClaw gateway token (from `~/.openclaw/.env` or generate new: `openssl rand -hex 32`)
+- [ ] Gateway token (from `~/.openclaw/.env` or generate new: `openssl rand -hex 32`)
+- [ ] Config `.env` file with Slack, Google, and Ollama keys (already in `~/.openclaw/.env`)
 
 ## Steps
 
-### 1. Prepare the LXC Host Directory Structure
+### 1. Prepare the LXC Host
 
-SSH into the LXC and create the deployment directory:
+SSH into the LXC and create directories for config and workspace:
 
 ```bash
 ssh root@<LXC-IP>
-mkdir -p /opt/openclaw/{config,workspace,docker}
+mkdir -p /opt/engram/{config,workspace}
 ```
 
-**Done when:** `/opt/openclaw/docker/`, `/opt/openclaw/config/`, and `/opt/openclaw/workspace/` exist.
+**Done when:** `/opt/engram/config/` and `/opt/engram/workspace/` exist.
 
-### 2. Copy Files from macOS to LXC
+### 2. Copy Config and Workspace from macOS
 
-From your Mac, transfer the config, workspace, and docker build files:
+Only the config and workspace need to be on the LXC host (they contain secrets and are bind-mounted). The source code is pulled from GitHub by Portainer.
 
 ```bash
-# Copy OpenClaw config (contains openclaw.json, .env, channel auth, etc.)
-scp -r ~/.openclaw/* root@<LXC-IP>:/opt/openclaw/config/
+# Copy Engram config (openclaw.json, .env, channel auth, credentials)
+scp -r ~/.openclaw/* root@<LXC-IP>:/opt/engram/config/
 
-# Copy workspace (skills, scripts, memories)
-scp -r ~/.openclaw/workspace/* root@<LXC-IP>:/opt/openclaw/workspace/
-
-# Copy custom Docker files
-scp -r ~/.openclaw/workspace/docker/* root@<LXC-IP>:/opt/openclaw/docker/
-
-# Copy the OpenClaw source (needed for Docker build)
-scp -r ~/Documents/dev/SecondBrain/openclaw root@<LXC-IP>:/opt/openclaw/docker/openclaw
+# Copy workspace (skills, scripts, identity files)
+scp -r ~/.openclaw/workspace/* root@<LXC-IP>:/opt/engram/workspace/
 ```
 
-**Done when:** `ls /opt/openclaw/docker/` shows `Dockerfile`, `docker-compose.yml`, `.env.example`, and `openclaw/` directory.
+**Done when:** `ls /opt/engram/config/` shows `openclaw.json` and `.env`, and `/opt/engram/workspace/skills/` has your skill directories.
 
 ### 3. Fix Permissions (uid 1000)
 
-The container runs as `node` (uid 1000). Host directories must match:
+> **WARNING:** The container runs as `node` (uid 1000). Host directories must match or you'll get EACCES errors.
 
 ```bash
 ssh root@<LXC-IP>
 useradd -u 1000 -m node 2>/dev/null || true
-chown -R 1000:1000 /opt/openclaw/config /opt/openclaw/workspace
+chown -R 1000:1000 /opt/engram/config /opt/engram/workspace
 ```
 
-**Done when:** `stat -c '%u' /opt/openclaw/config` returns `1000`.
+**Done when:** `stat -c '%u' /opt/engram/config` returns `1000`.
 
-### 4. Configure Environment Variables
+### 4. Update openclaw.json for Docker
+
+The config needs changes for container mode. Edit on the LXC:
 
 ```bash
-cd /opt/openclaw/docker
-cp .env.example .env
+nano /opt/engram/config/openclaw.json
 ```
-
-Edit `.env` with your actual values:
-
-```bash
-nano .env
-```
-
-| Variable | Where to Get It |
-|----------|-----------------|
-| `OPENCLAW_GATEWAY_TOKEN` | From macOS `~/.openclaw/.env` or generate: `openssl rand -hex 32` |
-| `CLAUDE_AI_SESSION_KEY` | Run `claude auth status` on macOS, copy the session key value |
-| `OPENCLAW_CONFIG_DIR` | `/opt/openclaw/config` |
-| `OPENCLAW_WORKSPACE_DIR` | `/opt/openclaw/workspace` |
-| `OPENCLAW_GATEWAY_PORT` | `18789` (or change if port conflicts) |
-
-**Done when:** `cat .env` shows all five variables filled in (no blanks).
-
-### 5. Update openclaw.json for Docker
-
-The config needs two changes for container mode:
-
-```bash
-ssh root@<LXC-IP>
-nano /opt/openclaw/config/openclaw.json
-```
-
-Change these values:
 
 | Setting | Old (macOS) | New (Docker) |
 |---------|-------------|--------------|
@@ -108,34 +74,38 @@ Change these values:
 | `agents.defaults.workspace` | `/Users/wayneerikson/.openclaw/workspace` | `/home/node/.openclaw/workspace` |
 | `skills.load.extraDirs[0]` | `~/Documents/dev/SecondBrain/.claude/skills` | `/home/node/.openclaw/workspace/skills` |
 
-**Done when:** `grep -c loopback /opt/openclaw/config/openclaw.json` returns `0`.
+**Done when:** `grep -c loopback /opt/engram/config/openclaw.json` returns `0`.
 
-### 6. Build the Image (CLI) or Deploy via Portainer
-
-**Option A: Portainer Stack (recommended)**
+### 5. Deploy via Portainer (Repository Method)
 
 1. Open Portainer UI in your browser
 2. Go to **Stacks** > **Add stack**
-3. Name: `openclaw`
-4. Build method: **Upload** > upload `docker-compose.yml`
-5. Environment variables: add each variable from `.env` (or use "Load variables from .env file")
-6. Click **Deploy the stack**
+3. Name: `engram`
+4. Build method: **Repository**
+5. Repository URL: `https://github.com/waynehead99/engram`
+6. Branch: `main`
+7. Compose path: `docker-compose.yml`
+8. **Enable "Git submodule support"** (toggle ON — required to pull the OpenClaw source)
+9. Add environment variables:
 
-> **WARNING:** If using Portainer "Repository" method, the build context must contain the `openclaw/` source directory. "Upload" with a pre-built image is simpler.
+| Variable | Value |
+|----------|-------|
+| `OPENCLAW_GATEWAY_TOKEN` | Your gateway token |
+| `OPENCLAW_CONFIG_DIR` | `/opt/engram/config` |
+| `OPENCLAW_WORKSPACE_DIR` | `/opt/engram/workspace` |
+| `OPENCLAW_GATEWAY_PORT` | `18789` |
 
-**Option B: CLI on LXC host**
+10. Click **Deploy the stack**
 
-```bash
-cd /opt/openclaw/docker
-docker compose build
-docker compose up -d
-```
+> **NOTE:** Slack, Google, and Ollama credentials are NOT set as Docker env vars. They live inside the config directory's `.env` file (`/opt/engram/config/.env`) which OpenClaw loads automatically via dotenv at startup.
 
-**Done when:** `docker ps` shows `engram` with status `Up`.
+> **NOTE:** The first build takes several minutes (cloning OpenClaw, `pnpm install`, `pnpm build`). Subsequent rebuilds are faster due to Docker layer caching.
 
-### 7. Verify the Deployment
+**Done when:** Portainer shows the `engram` stack as running (green).
 
-Run these checks from the LXC host:
+### 6. Verify the Deployment
+
+From the LXC host:
 
 ```bash
 # Container is running
@@ -148,13 +118,13 @@ docker exec engram node dist/index.js health --token "$OPENCLAW_GATEWAY_TOKEN"
 docker logs engram --tail 20
 ```
 
-Check from your browser:
+From your browser:
 - Open `http://<LXC-IP>:18789/`
 - Paste gateway token in Settings
 - Verify "Connected" status
 
-Check Slack:
-- Send a DM to Engram bot in Slack
+From Slack:
+- Send a DM to Engram bot
 - Expect a response within 30 seconds
 
 **Done when:** All three checks pass (container up, UI loads, Slack responds).
@@ -178,62 +148,71 @@ docker restart engram
 Edit config on host, then restart:
 
 ```bash
-nano /opt/openclaw/config/openclaw.json
+nano /opt/engram/config/openclaw.json
 docker restart engram
 ```
 
-### Update Image (New OpenClaw Version)
+### Update Engram (New Version / New Skills)
+
+1. Push changes to `waynehead99/engram` on GitHub
+2. In Portainer: **Stacks** > `engram` > **Editor** > **Pull and redeploy**
+3. If the OpenClaw submodule was updated, Portainer re-clones and rebuilds
+
+To update the OpenClaw submodule to latest upstream:
 
 ```bash
-cd /opt/openclaw/docker
-
-# Pull latest source
-scp -r user@mac:~/Documents/dev/SecondBrain/openclaw /opt/openclaw/docker/openclaw
-
-# Rebuild and restart
-docker compose build --no-cache
-docker compose up -d
+cd ~/Documents/dev/SecondBrain/engram
+git submodule update --remote openclaw
+git add openclaw
+git commit -m "Update OpenClaw submodule to latest"
+git push origin main
 ```
 
-### Update Skills/Workspace
+Then redeploy in Portainer.
 
-No restart needed — workspace is bind-mounted:
+### Update Skills/Workspace Only
+
+No rebuild needed — workspace is bind-mounted:
 
 ```bash
-scp -r user@mac:~/.openclaw/workspace/* /opt/openclaw/workspace/
+scp -r ~/.openclaw/workspace/* root@<LXC-IP>:/opt/engram/workspace/
 ```
 
 ## Troubleshooting
 
-**Problem:** Container exits immediately with `EACCES` permission error
-**Fix:** Ownership mismatch. Run `chown -R 1000:1000 /opt/openclaw/config /opt/openclaw/workspace`
+**Problem:** Container exits with `EACCES` permission error
+**Fix:** Run `chown -R 1000:1000 /opt/engram/config /opt/engram/workspace`
+
+**Problem:** Portainer build fails on "openclaw/ directory not found"
+**Fix:** Ensure **Git submodule support** is enabled in the Portainer stack settings.
 
 **Problem:** Slack doesn't connect ("socket closed" in logs)
-**Fix:** Check that `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` are in `/opt/openclaw/config/.env` and the LXC has outbound internet access. Restart the container.
+**Fix:** Check `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in `/opt/engram/config/.env` and verify LXC has outbound internet. Restart the container.
 
 **Problem:** Claude CLI returns "unauthorized" or "session expired"
-**Fix:** Get a fresh `CLAUDE_AI_SESSION_KEY` from macOS (`claude auth status`), update `.env`, and restart: `docker compose up -d`
+**Fix:** Get a fresh `CLAUDE_AI_SESSION_KEY` from macOS (`claude auth status`), update the env var in Portainer stack settings, redeploy.
 
-**Problem:** Memory flush / compaction not saving to Notion
-**Fix:** Verify Google/Notion credentials are present in the config `.env`. Check logs for API errors: `docker logs engram | grep -i "notion\|google\|error"`
+**Problem:** Memory flush not saving to Notion
+**Fix:** Verify Google/Notion credentials in `/opt/engram/config/.env`. Check logs: `docker logs engram | grep -i "notion\|google\|error"`
 
 **Problem:** Container uses too much memory
-**Fix:** Add memory limit to `docker-compose.yml` under the service: `deploy: resources: limits: memory: 2g`
+**Fix:** Add to compose env in Portainer or edit `docker-compose.yml`: `deploy: resources: limits: memory: 2g`
 
-**Problem:** Port 18789 already in use on LXC
-**Fix:** Change `OPENCLAW_GATEWAY_PORT` in `.env` to a free port (e.g., `18790`), then `docker compose up -d`
+**Problem:** Port 18789 already in use
+**Fix:** Change `OPENCLAW_GATEWAY_PORT` env var in Portainer stack settings, redeploy.
 
 **Problem:** Heartbeat not firing
-**Fix:** Check that `heartbeat.every` and `heartbeat.activeHours` are configured in `openclaw.json`. Container timezone defaults to UTC — adjust `activeHours` accordingly or set `TZ` env var in compose.
+**Fix:** Check `heartbeat.every` and `heartbeat.activeHours` in `openclaw.json`. Container defaults to UTC — adjust `activeHours` or add `TZ=America/Chicago` env var in Portainer.
 
 ## Undo
 
-Stop and remove the deployment:
+In Portainer: **Stacks** > `engram` > **Delete this stack**
+
+Or from CLI:
 
 ```bash
-cd /opt/openclaw/docker
-docker compose down
-docker volume rm docker_engram_home
+docker stop engram && docker rm engram
+docker volume rm engram_engram_home
 ```
 
-Config and workspace remain on disk at `/opt/openclaw/` and can be re-deployed.
+Config and workspace remain on disk at `/opt/engram/` and can be re-deployed.

@@ -1,5 +1,9 @@
 # Engram — Portainer Stack (single gateway service)
 # Deploy as a Portainer stack or with: docker compose up -d
+#
+# Secrets (Slack, Google, Ollama, etc.) are loaded automatically from
+# the .env file inside the mounted config directory — no need to pass
+# them as Docker env vars.
 
 services:
   engram:
@@ -12,7 +16,6 @@ services:
       HOME: /home/node
       TERM: xterm-256color
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
-      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-./config}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-./workspace}:/home/node/.openclaw/workspace
