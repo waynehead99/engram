@@ -1,6 +1,8 @@
 # Engram — Custom Gateway Image (Claude CLI + Python for Google Workspace)
 # Built on OpenClaw framework with Claude Code CLI and Python dependencies
 # for Google Workspace scripts (Gmail, Calendar).
+#
+# OpenClaw source is cloned at build time — no submodule needed.
 
 FROM node:22-bookworm
 
@@ -22,15 +24,22 @@ RUN corepack enable
 
 WORKDIR /app
 
+# Clone OpenClaw source at build time
+# Pin to a specific commit/tag with OPENCLAW_VERSION for reproducible builds
+ARG OPENCLAW_VERSION=main
+RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} \
+    https://github.com/openclaw/openclaw.git /tmp/openclaw
+
 # Copy lockfiles first for layer caching
-COPY openclaw/package.json openclaw/pnpm-lock.yaml openclaw/pnpm-workspace.yaml openclaw/.npmrc ./
-COPY openclaw/ui/package.json ./ui/package.json
-COPY openclaw/patches ./patches
-COPY openclaw/scripts ./scripts
+RUN cp /tmp/openclaw/package.json /tmp/openclaw/pnpm-lock.yaml \
+       /tmp/openclaw/pnpm-workspace.yaml /tmp/openclaw/.npmrc ./
+RUN mkdir -p ui && cp /tmp/openclaw/ui/package.json ./ui/package.json
+RUN cp -r /tmp/openclaw/patches ./patches
+RUN cp -r /tmp/openclaw/scripts ./scripts
 
 RUN pnpm install --frozen-lockfile
 
-COPY openclaw/ .
+RUN cp -r /tmp/openclaw/. . && rm -rf /tmp/openclaw
 RUN pnpm build
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build

@@ -85,8 +85,7 @@ nano /opt/engram/config/openclaw.json
 5. Repository URL: `https://github.com/waynehead99/engram`
 6. Branch: `main`
 7. Compose path: `docker-compose.yml`
-8. **Enable "Git submodule support"** (toggle ON — required to pull the OpenClaw source)
-9. Add environment variables:
+8. Add environment variables:
 
 | Variable | Value |
 |----------|-------|
@@ -99,7 +98,9 @@ nano /opt/engram/config/openclaw.json
 
 > **NOTE:** Slack, Google, and Ollama credentials are NOT set as Docker env vars. They live inside the config directory's `.env` file (`/opt/engram/config/.env`) which OpenClaw loads automatically via dotenv at startup.
 
-> **NOTE:** The first build takes several minutes (cloning OpenClaw, `pnpm install`, `pnpm build`). Subsequent rebuilds are faster due to Docker layer caching.
+9. Click **Deploy the stack**
+
+> **NOTE:** The first build takes several minutes (cloning OpenClaw from GitHub, `pnpm install`, `pnpm build`). Subsequent rebuilds are faster due to Docker layer caching.
 
 **Done when:** Portainer shows the `engram` stack as running (green).
 
@@ -156,19 +157,8 @@ docker restart engram
 
 1. Push changes to `waynehead99/engram` on GitHub
 2. In Portainer: **Stacks** > `engram` > **Editor** > **Pull and redeploy**
-3. If the OpenClaw submodule was updated, Portainer re-clones and rebuilds
 
-To update the OpenClaw submodule to latest upstream:
-
-```bash
-cd ~/Documents/dev/SecondBrain/engram
-git submodule update --remote openclaw
-git add openclaw
-git commit -m "Update OpenClaw submodule to latest"
-git push origin main
-```
-
-Then redeploy in Portainer.
+The Dockerfile clones OpenClaw from GitHub at build time (`main` branch by default). To pin a specific version, add a build arg in compose: `OPENCLAW_VERSION: v2026.2.10`
 
 ### Update Skills/Workspace Only
 
@@ -182,9 +172,6 @@ scp -r ~/.openclaw/workspace/* root@<LXC-IP>:/opt/engram/workspace/
 
 **Problem:** Container exits with `EACCES` permission error
 **Fix:** Run `chown -R 1000:1000 /opt/engram/config /opt/engram/workspace`
-
-**Problem:** Portainer build fails on "openclaw/ directory not found"
-**Fix:** Ensure **Git submodule support** is enabled in the Portainer stack settings.
 
 **Problem:** Slack doesn't connect ("socket closed" in logs)
 **Fix:** Check `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in `/opt/engram/config/.env` and verify LXC has outbound internet. Restart the container.
