@@ -1,0 +1,122 @@
+{
+  // OpenClaw Configuration — Second Brain Assistant
+  // Config reference: https://openclaw.ai/docs/reference/config
+
+  // ── Model Providers ──────────────────────────────────────────────────
+  "models": {
+    "providers": {
+      "ollama": {
+        "baseUrl": "http://10.0.254.23:11434/v1",
+        "api": "openai-completions",
+        // Models are auto-discovered from Ollama server
+        "models": []
+      }
+    }
+  },
+
+  // ── Agent Defaults ───────────────────────────────────────────────────
+  "agents": {
+    "defaults": {
+      // Claude CLI is the primary model (uses Max subscription)
+      "model": {
+        "primary": "claude-cli/opus",
+        "fallbacks": ["claude-cli/sonnet"]
+      },
+      // Working directory
+      "workspace": "~/.openclaw/workspace",
+      // Timezone
+      "userTimezone": "America/Chicago",
+      "timeFormat": "12",
+      // Thinking
+      "thinkingDefault": "medium",
+      // Heartbeat — runs every 30 minutes during active hours
+      "heartbeat": {
+        "every": "30m",
+        "activeHours": {
+          "start": "07:00",
+          "end": "22:00",
+          "timezone": "user"
+        },
+        "model": "claude-cli/sonnet",
+        "session": "main",
+        "target": "last"
+      },
+      // CLI backends — claude-cli is built-in, just override if needed
+      "cliBackends": {
+        "claude-cli": {
+          "command": "claude",
+          "serialize": true
+        }
+      },
+      // Context management
+      "contextTokens": 200000,
+      "compaction": {
+        "mode": "safeguard",
+        "memoryFlush": {
+          "enabled": true,
+          "prompt": "Write a comprehensive memory file capturing the key information from this conversation. Include:\n\n1. **Decisions made** — what was decided and why\n2. **Key learnings** — technical insights, solutions found, patterns discovered\n3. **Context** — project names, file paths, tool configurations discussed\n4. **Action items** — anything that needs follow-up\n5. **People & references** — names, links, resources mentioned\n\nFormat with clear markdown headings. Be thorough — this file is the bridge between sessions.\n\nAt the end of the file, add this sync marker on its own line:\n\n<!-- unsynced -->\n\nThis tells the heartbeat system to sync this memory to Notion."
+        }
+      },
+      // Sandbox for non-main sessions
+      "sandbox": {
+        "mode": "non-main",
+        "workspaceAccess": "ro"
+      }
+    }
+  },
+
+  // ── Channels ─────────────────────────────────────────────────────────
+  "channels": {
+    "slack": {
+      "enabled": false,
+      "mode": "socket",
+      // Tokens loaded from env: SLACK_BOT_TOKEN, SLACK_APP_TOKEN
+      "requireMention": false,
+      "groupPolicy": "allowlist",
+      "dm": {
+        "enabled": true,
+        "policy": "open",
+        "allowFrom": ["*"]
+      },
+      "blockStreaming": true,
+      "historyLimit": 50,
+      "dmHistoryLimit": 100,
+      "reactionNotifications": "own",
+      "actions": {
+        "reactions": true,
+        "messages": true,
+        "search": true
+      }
+    }
+  },
+
+  // ── Skills ───────────────────────────────────────────────────────────
+  "skills": {
+    "load": {
+      "extraDirs": [
+        "~/Documents/dev/SecondBrain/.claude/skills"
+      ],
+      "watch": true
+    }
+  },
+
+  // ── Gateway ──────────────────────────────────────────────────────────
+  "gateway": {
+    "port": 3377,
+    "bind": "loopback",
+    "auth": {
+      "mode": "token"
+      // Token loaded from env: OPENCLAW_GATEWAY_TOKEN
+    }
+  },
+
+  // ── Memory ───────────────────────────────────────────────────────────
+  "memory": {
+    "backend": "builtin"
+  },
+
+  // ── Logging ──────────────────────────────────────────────────────────
+  "logging": {
+    "level": "info"
+  }
+}
