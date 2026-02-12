@@ -10,3 +10,5 @@ identity/
 update-check.json
 *.bak
 *.bak.*
+__pycache__/
+.venv/

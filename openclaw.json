@@ -42,8 +42,10 @@
       },
       "compaction": {
         "mode": "safeguard",
+        "reserveTokensFloor": 15000,
         "memoryFlush": {
           "enabled": true,
+          "softThresholdTokens": 80000,
           "prompt": "Write a comprehensive memory file capturing the key information from this conversation. Include:\n\n1. **Decisions made** — what was decided and why\n2. **Key learnings** — technical insights, solutions found, patterns discovered\n3. **Context** — project names, file paths, tool configurations discussed\n4. **Action items** — anything that needs follow-up\n5. **People & references** — names, links, resources mentioned\n\nFormat with clear markdown headings. Be thorough — this file is the bridge between sessions.\n\nAt the end of the file, add this sync marker on its own line:\n\n<!-- unsynced -->\n\nThis tells the heartbeat system to sync this memory to Notion."
         }
       },
@@ -65,7 +67,7 @@
       },
       "sandbox": {
         "mode": "non-main",
-        "workspaceAccess": "ro"
+        "workspaceAccess": "rw"
       }
     }
   },
