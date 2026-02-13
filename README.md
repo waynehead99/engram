@@ -201,7 +201,14 @@ Once the gateway is running, you can set up all your integrations through the br
 | **Agents** | Manage agent workspaces and identities |
 | **Logs** | Live-tail gateway logs for debugging |
 
-**To connect Slack:** Go to the **Channels** tab, enter your `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. See [Slack Setup](#slack-setup-recommended) for how to create these tokens.
+**To connect Slack:**
+1. Add your `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` to `/opt/engram/config/.env` (see [Slack Setup](#slack-setup-recommended) for how to create these tokens)
+2. Enable the Slack channel — either:
+   - Open the **Config** tab, find `channels.slack.enabled`, set it to `true`, and save
+   - Or from the command line: `sudo sed -i 's/"enabled": false/"enabled": true/' /opt/engram/config/openclaw.json`
+3. Restart: `docker restart engram`
+
+> **Note:** Slack is disabled by default to prevent startup errors before tokens are configured. You must enable it after adding your tokens.
 
 **To connect Notion:** Go to the **Skills** tab and inject your `NOTION_API_TOKEN` for the Notion skills. See [Notion Setup](#notion-setup-for-knowledge-management) for how to get this token.
 
