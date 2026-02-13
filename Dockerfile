@@ -51,9 +51,10 @@ RUN pnpm ui:build
 FROM node:22-bookworm-slim
 
 # System deps for runtime
+# procps provides pkill/pgrep (required by OpenClaw CLI backend for process management)
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv curl && \
+    python3 python3-pip python3-venv curl procps && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Python packages in a virtual environment (clean isolation)
