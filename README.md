@@ -157,7 +157,30 @@ Starting OpenClaw gateway...
 
 Open your browser to `http://your-server-ip:18789` — this is the **Control UI** where you'll finish setup.
 
-### Step 7: Configure Integrations via the Web UI
+### Step 7: Pair with the Gateway
+
+When you first open the Control UI, you'll see the **Overview** tab with a **Gateway Access** card. The gateway requires authentication before you can use any features.
+
+1. The **WebSocket URL** should already be filled in (e.g., `ws://your-server-ip:18789`). If not, enter it.
+2. Paste your **Gateway Token** (the `OPENCLAW_GATEWAY_TOKEN` from your `.env` file) into the **Gateway Token** field.
+3. Click **Connect**.
+
+If the connection succeeds, you'll see the status change to **Connected** and all tabs will become active. Your browser generates a device identity and stores a device token locally, so you won't need to enter the gateway token again on that browser.
+
+> **Tip:** If you see *"This gateway requires auth"*, double-check that your gateway token matches what's in your `.env` file. You can also generate a new one with: `docker exec -it engram node dist/index.js doctor --generate-gateway-token`
+
+**Pairing additional devices (mobile, other computers):**
+
+If you want to access Engram from another device (phone, tablet, another PC):
+
+1. Open the Control UI from the new device's browser
+2. Enter the WebSocket URL and gateway token, then click **Connect**
+3. If the gateway uses device-level pairing, the request will appear in the **Nodes** tab on your already-paired browser
+4. Click **Approve** to grant access
+
+You can manage all paired devices from the **Nodes** tab — rotate tokens, revoke access, or view connection status.
+
+### Step 8: Configure Integrations via the Web UI
 
 Once the gateway is running, you can set up all your integrations through the browser instead of editing files by hand. The Control UI has everything you need:
 
