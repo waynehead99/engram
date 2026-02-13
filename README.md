@@ -45,7 +45,9 @@ Before you start, you need:
 
 ---
 
-## Quick Start (5 Steps)
+## Quick Start
+
+Engram only needs **two tokens** to start. Everything else (Slack, Notion, Google, Ollama) can be configured through the web UI after the container is running.
 
 ### Step 1: Clone the Repository
 
@@ -62,7 +64,7 @@ cd engram
 cp .env.example .env
 ```
 
-Open the `.env` file in a text editor (like `nano .env`) and fill in:
+Open the `.env` file in a text editor (like `nano .env`) and fill in the two required tokens:
 
 **Gateway Token** — protects your Engram web interface:
 ```bash
@@ -102,17 +104,9 @@ sudo cp openclaw.json /opt/engram/config/
 # Copy the workspace (personality, skills, tools docs)
 sudo cp -r workspace/* /opt/engram/workspace/
 
-# Copy the secrets template
+# Copy the secrets template (you can fill this in now or use the web UI later)
 sudo cp config/.env.example /opt/engram/config/.env
 ```
-
-Now edit the secrets file:
-
-```bash
-sudo nano /opt/engram/config/.env
-```
-
-Fill in your Slack tokens, Google credentials, and Notion API key. See the [Integration Setup](#integration-setup) section below for how to get each one.
 
 ### Step 4: Set Permissions
 
@@ -142,8 +136,9 @@ docker compose up -d
    - `OPENCLAW_WORKSPACE_DIR` = `/opt/engram/workspace`
 7. Click **Deploy the stack**
 
-### Verify It's Running
+### Step 6: Verify and Configure
 
+Check that the container started:
 ```bash
 docker logs engram
 ```
@@ -160,7 +155,41 @@ Configuration:
 Starting OpenClaw gateway...
 ```
 
-Open your browser to `http://your-server-ip:18789` to see the web UI.
+Open your browser to `http://your-server-ip:18789` — this is the **Control UI** where you'll finish setup.
+
+### Step 7: Configure Integrations via the Web UI
+
+Once the gateway is running, you can set up all your integrations through the browser instead of editing files by hand. The Control UI has everything you need:
+
+| Tab | What You Can Do |
+|-----|----------------|
+| **Config** | Edit all gateway settings (models, Ollama URL, heartbeat schedule, etc.) using a form or raw JSON editor. Sensitive fields like tokens are auto-masked. |
+| **Channels** | Set up Slack, Discord, or Telegram connections and enter channel tokens |
+| **Skills** | Enable/disable skills and inject API keys (Notion token, Google credentials, etc.) |
+| **Sessions** | View and manage active conversations |
+| **Cron** | Schedule recurring tasks and heartbeats |
+| **Agents** | Manage agent workspaces and identities |
+| **Logs** | Live-tail gateway logs for debugging |
+
+**To connect Slack:** Go to the **Channels** tab, enter your `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN`. See [Slack Setup](#slack-setup-recommended) for how to create these tokens.
+
+**To connect Notion:** Go to the **Skills** tab and inject your `NOTION_API_TOKEN` for the Notion skills. See [Notion Setup](#notion-setup-for-knowledge-management) for how to get this token.
+
+**To connect Google:** Enter your Google credentials via the **Config** tab or the config `.env` file. See [Google Workspace Setup](#google-workspace-setup-for-gmail-and-calendar) for the full OAuth process.
+
+> **Tip:** You can also configure everything by editing `/opt/engram/config/.env` directly if you prefer the command line. The web UI and the config files stay in sync.
+
+### Built-in Diagnostic Tools
+
+If something isn't working, OpenClaw has built-in tools to help:
+
+```bash
+# Run the doctor — checks config, connectivity, and offers auto-repair
+docker exec -it engram node dist/index.js doctor
+
+# Re-run the setup wizard interactively
+docker exec -it engram node dist/index.js configure
+```
 
 ---
 
@@ -168,9 +197,13 @@ Open your browser to `http://your-server-ip:18789` to see the web UI.
 
 Each integration is optional. Engram works with just Claude AI, but gets more powerful with each integration you add.
 
+You can enter tokens and credentials either through the **Control UI** (recommended) or by editing `/opt/engram/config/.env` directly. Both methods work — the UI and config files stay in sync.
+
 ### Slack Setup (Recommended)
 
 This lets you talk to Engram via Slack direct messages.
+
+**Create the Slack App:**
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App**
 2. Choose **From scratch**, name it "Engram", and select your workspace
@@ -190,29 +223,36 @@ This lets you talk to Engram via Slack direct messages.
    - `reaction_added`
 6. Install the app to your workspace
 7. Copy the **Bot User OAuth Token** (starts with `xoxb-`). This is your `SLACK_BOT_TOKEN`
-8. Add both tokens to `/opt/engram/config/.env`
+
+**Add to Engram:** Go to the **Channels** tab in the Control UI and enter both tokens, or add them to `/opt/engram/config/.env`.
 
 ### Notion Setup (For Knowledge Management)
 
 This lets Engram save and search your personal knowledge base.
+
+**Create the Notion Integration:**
 
 1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
 2. Click **New integration**
 3. Name it "Engram", select your workspace
 4. Under Capabilities, enable: Read content, Update content, Insert content
 5. Copy the **Internal Integration Secret** (starts with `ntn_`)
-6. Add it as `NOTION_API_TOKEN` in `/opt/engram/config/.env`
 
-**Important:** You also need to share your Notion databases with the integration:
+**Share your databases with the integration:**
+
 1. Open each database (Knowledge Base, Projects, Tasks, SOPs) in Notion
 2. Click the `...` menu in the top right
 3. Click **Connections** > **Connect to** > select "Engram"
+
+**Add to Engram:** Go to the **Skills** tab in the Control UI and inject the Notion token for each Notion skill, or add `NOTION_API_TOKEN` to `/opt/engram/config/.env`.
 
 The default Notion database IDs are configured in `workspace/TOOLS.md`. If you use different databases, update the IDs there.
 
 ### Google Workspace Setup (For Gmail and Calendar)
 
 This lets Engram read your email and calendar.
+
+**Create Google OAuth Credentials:**
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Create a new project (or select an existing one)
@@ -223,7 +263,8 @@ This lets Engram read your email and calendar.
 7. Choose **Desktop app** as the application type
 8. Download the credentials JSON file
 
-To get a refresh token:
+**Get a refresh token:**
+
 1. Go to [developers.google.com/oauthplayground](https://developers.google.com/oauthplayground/)
 2. Click the gear icon, check "Use your own OAuth credentials"
 3. Enter your Client ID and Client Secret
@@ -237,19 +278,21 @@ To get a refresh token:
 6. Click **Exchange authorization code for tokens**
 7. Copy the **Refresh token**
 
-Add all three values to `/opt/engram/config/.env`:
+**Add to Engram:** Add all three values to `/opt/engram/config/.env`:
 ```
 GOOGLE_CLIENT_ID=your-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-secret
 GOOGLE_REFRESH_TOKEN=your-refresh-token
 ```
 
+Or enter them via the **Config** tab in the Control UI.
+
 ### Ollama Setup (For Local Models — Optional)
 
 If you run an Ollama server for local AI models:
 
 1. Make sure Ollama is accessible from your Docker host
-2. Edit `openclaw.json` and update the Ollama URL:
+2. In the **Config** tab of the Control UI, find the Ollama provider section and update the base URL. Or edit `openclaw.json` directly:
    ```json
    "ollama": {
      "baseUrl": "http://YOUR_OLLAMA_IP:11434/v1"
@@ -377,9 +420,11 @@ Edit the files in your workspace directory (`/opt/engram/workspace/`):
 - `SOUL.md` — Detailed personality, communication style, and values
 - `USER.md` — Your name, timezone, and personal context
 
+You can also manage workspace files through the **Agents** tab in the Control UI.
+
 ### Changing the AI Model
 
-Edit `openclaw.json` in your config directory. The `agents.defaults.model` section controls which Claude model is used:
+Open the **Config** tab in the Control UI, or edit `openclaw.json` in your config directory. The `agents.defaults.model` section controls which Claude model is used:
 
 ```json
 "model": {
@@ -394,22 +439,39 @@ Edit `openclaw.json` in your config directory. The `agents.defaults.model` secti
 2. Add a `SKILL.md` file with YAML frontmatter (name, description) and instructions
 3. Engram will auto-detect it (skill watching is enabled)
 
+You can manage skills and their API keys through the **Skills** tab in the Control UI.
+
 ---
 
 ## Maintenance
 
 ### Viewing Logs
+
 ```bash
 docker logs engram          # Recent logs
 docker logs -f engram       # Follow logs in real time
 ```
 
+Or use the **Logs** tab in the Control UI for live log tailing in your browser.
+
+### Running Diagnostics
+
+```bash
+# Doctor checks config, connectivity, and can auto-repair issues
+docker exec -it engram node dist/index.js doctor
+
+# Re-run the interactive setup wizard
+docker exec -it engram node dist/index.js configure
+```
+
 ### Restarting
+
 ```bash
 docker compose restart      # Restart the container
 ```
 
 ### Updating
+
 ```bash
 git pull                    # Get latest code
 docker compose build        # Rebuild the image
@@ -417,6 +479,7 @@ docker compose up -d        # Restart with new image
 ```
 
 ### Backing Up
+
 ```bash
 # Back up your config and workspace
 sudo tar czf engram-backup-$(date +%Y%m%d).tar.gz /opt/engram/
