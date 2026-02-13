@@ -1,6 +1,6 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.2.13",
+    "lastTouchedVersion": "2026.2.10",
     "lastTouchedAt": "2026-02-13T12:00:00.000Z"
   },
   "logging": {
@@ -76,7 +76,7 @@
     "slack": {
       "mode": "socket",
       "webhookPath": "/slack/events",
-      "enabled": true,
+      "enabled": false,
       "userTokenReadOnly": true,
       "requireMention": false,
       "groupPolicy": "allowlist",
