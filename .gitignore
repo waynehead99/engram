@@ -2,6 +2,10 @@
 .env
 config/.env
 
+# Config directory runtime files (users create these during setup)
+config/openclaw.json
+config/agents/
+
 # macOS
 .DS_Store
 

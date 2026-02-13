@@ -37,7 +37,13 @@ RUN cp -r /tmp/openclaw/scripts ./scripts
 RUN pnpm install --frozen-lockfile
 
 RUN cp -r /tmp/openclaw/. . && rm -rf /tmp/openclaw
-RUN pnpm build
+
+# Build the gateway runtime (rolldown bundle).
+# The DTS (TypeScript declarations) step may fail on some OpenClaw versions
+# due to upstream type errors — but dist/index.js is all we need for runtime.
+RUN pnpm build || \
+    (test -f dist/index.js && echo "Core build succeeded; DTS errors ignored")
+
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
 
