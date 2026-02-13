@@ -157,26 +157,33 @@ Starting OpenClaw gateway...
 
 Open your browser to `http://your-server-ip:18789` — this is the **Control UI** where you'll finish setup.
 
-### Step 7: Pair with the Gateway
+### Step 7: Connect to the Control UI
 
-When you first open the Control UI, you'll see the **Overview** tab with a **Gateway Access** card. The gateway requires authentication before you can use any features.
+When you first open the Control UI, you'll see the **Overview** tab with a **Gateway Access** card. You need to authenticate before you can use any features.
+
+**How the gateway authenticates you:**
+
+OpenClaw uses two layers of security: a **gateway token** (shared secret) and **device pairing** (per-browser/device approval). For a self-hosted Docker deployment, the included config has `allowInsecureAuth` enabled so that token-only authentication works over HTTP without requiring device-level pairing. Your gateway token is the only credential needed.
+
+**To connect:**
 
 1. The **WebSocket URL** should already be filled in (e.g., `ws://your-server-ip:18789`). If not, enter it.
 2. Paste your **Gateway Token** (the `OPENCLAW_GATEWAY_TOKEN` from your `.env` file) into the **Gateway Token** field.
 3. Click **Connect**.
 
-If the connection succeeds, you'll see the status change to **Connected** and all tabs will become active. Your browser generates a device identity and stores a device token locally, so you won't need to enter the gateway token again on that browser.
+If the connection succeeds, the status changes to **Connected** and all tabs become active. Your browser stores a device token locally, so you won't need to enter the gateway token again on that browser.
 
-> **Tip:** If you see *"This gateway requires auth"*, double-check that your gateway token matches what's in your `.env` file. You can also generate a new one with: `docker exec -it engram node dist/index.js doctor --generate-gateway-token`
+> **Tip:** If you see *"This gateway requires auth"*, double-check that your gateway token matches what's in your `.env` file.
 
-**Pairing additional devices (mobile, other computers):**
+**Enabling strict device pairing (optional):**
 
-If you want to access Engram from another device (phone, tablet, another PC):
+If you want each browser/device to be individually approved (more secure, recommended if the gateway is exposed to the internet):
 
-1. Open the Control UI from the new device's browser
-2. Enter the WebSocket URL and gateway token, then click **Connect**
-3. If the gateway uses device-level pairing, the request will appear in the **Nodes** tab on your already-paired browser
-4. Click **Approve** to grant access
+1. Open the **Config** tab in the Control UI
+2. Find `gateway.controlUi` and remove `allowInsecureAuth` (or set it to `false`)
+3. Save the config
+4. New devices will now require approval — their requests appear in the **Nodes** tab
+5. Click **Approve** to grant access, or **Reject** to deny
 
 You can manage all paired devices from the **Nodes** tab — rotate tokens, revoke access, or view connection status.
 

@@ -104,6 +104,9 @@
     "bind": "lan",
     "auth": {
       "mode": "token"
+    },
+    "controlUi": {
+      "allowInsecureAuth": true
     }
   },
   "memory": {
