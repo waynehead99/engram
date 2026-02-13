@@ -2,7 +2,7 @@
 
 **Your personal AI assistant with perfect memory.**
 
-Engram is a self-hosted AI assistant that connects to your Slack, reads your email and calendar, manages projects in Notion, and remembers everything across conversations. It runs as a Docker container and is designed to be deployed via Portainer.
+Engram is a self-hosted AI assistant built on the [OpenClaw](https://github.com/openclaw/openclaw) framework. It connects to your Slack, reads your email and calendar, manages projects in Notion, and remembers everything across conversations. It runs as a Docker container and is designed to be deployed via Portainer.
 
 ```
 You (Slack DM) ──> Engram Container ──> Claude AI (thinking)
@@ -561,6 +561,10 @@ sudo tar czf engram-backup-$(date +%Y%m%d).tar.gz /opt/engram/
 - Check that port 18789 isn't already in use on your server
 
 ---
+
+## Acknowledgments
+
+Engram is built on [OpenClaw](https://github.com/openclaw/openclaw), an open-source AI assistant gateway framework. OpenClaw provides the core gateway runtime, conversation management, channel integrations (Slack, Discord, Telegram), the Control UI, CLI backend orchestration, and the skills/plugin system that Engram extends. Without OpenClaw, this project would not be possible.
 
 ## License
 
