@@ -66,12 +66,12 @@ The config needs changes for container mode:
 nano /opt/engram/config/openclaw.json
 ```
 
-| Setting | Old (macOS) | New (Docker) |
-|---------|-------------|--------------|
+| Setting | Old (local dev) | New (Docker) |
+|---------|-----------------|--------------|
 | `gateway.bind` | `"loopback"` | `"lan"` |
 | `gateway.port` | `3377` | `18789` |
-| `agents.defaults.workspace` | `/Users/wayneerikson/.openclaw/workspace` | `/home/node/.openclaw/workspace` |
-| `skills.load.extraDirs[0]` | `~/Documents/dev/SecondBrain/.claude/skills` | `/home/node/.openclaw/workspace/skills` |
+| `agents.defaults.workspace` | `~/.openclaw/workspace` | `~/.openclaw/workspace` (same — uses home dir) |
+| `skills.load.extraDirs[0]` | Local skills path | `~/.openclaw/workspace/skills` (bundled in repo) |
 
 **Done when:** `grep -c loopback /opt/engram/config/openclaw.json` returns `0`.
 
@@ -90,7 +90,21 @@ This clones OpenClaw from GitHub during the build and compiles everything. First
 
 **Done when:** `docker images engram` shows `engram:latest`.
 
-### 6. Configure Environment and Start
+### 6. Generate Claude CLI OAuth Token
+
+> **WARNING:** The `claude-cli/opus` model backend requires Claude CLI to be authenticated. Without this, you'll get "Not logged in" errors.
+
+On your **Mac** (not the LXC), run:
+
+```bash
+claude setup-token
+```
+
+This opens a browser OAuth flow and outputs a long-lived token (valid 1 year) starting with `sk-ant-oat01-...`. Copy it — you'll need it in the next step.
+
+**Done when:** You have a token starting with `sk-ant-oat01-`.
+
+### 7. Configure Environment and Start
 
 ```bash
 cd /opt/engram/repo
@@ -103,6 +117,7 @@ Fill in these values:
 | Variable | Value |
 |----------|-------|
 | `OPENCLAW_GATEWAY_TOKEN` | Your gateway token |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Token from step 6 (`sk-ant-oat01-...`) |
 | `OPENCLAW_CONFIG_DIR` | `/opt/engram/config` |
 | `OPENCLAW_WORKSPACE_DIR` | `/opt/engram/workspace` |
 | `OPENCLAW_GATEWAY_PORT` | `18789` |
@@ -117,7 +132,7 @@ docker compose up -d
 
 **Done when:** `docker ps` shows `engram` with status `Up`.
 
-### 7. Import into Portainer
+### 8. Import into Portainer
 
 The container is already running. To manage it through Portainer:
 
@@ -136,6 +151,7 @@ services:
       HOME: /home/node
       TERM: xterm-256color
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN}
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
     volumes:
       - ${OPENCLAW_CONFIG_DIR:-./config}:/home/node/.openclaw
       - ${OPENCLAW_WORKSPACE_DIR:-./workspace}:/home/node/.openclaw/workspace
@@ -144,27 +160,25 @@ services:
       - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
     init: true
     restart: unless-stopped
-    command:
-      - "node"
-      - "dist/index.js"
-      - "gateway"
-      - "--bind"
-      - "lan"
-      - "--port"
-      - "18789"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:18789/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
 volumes:
   engram_home:
 ```
 
-6. Add environment variables: `OPENCLAW_GATEWAY_TOKEN`, `OPENCLAW_CONFIG_DIR`, `OPENCLAW_WORKSPACE_DIR`, `OPENCLAW_GATEWAY_PORT`
+6. Add environment variables: `OPENCLAW_GATEWAY_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCLAW_CONFIG_DIR`, `OPENCLAW_WORKSPACE_DIR`, `OPENCLAW_GATEWAY_PORT`
 7. Click **Deploy the stack**
 
 > **NOTE:** If Portainer complains the container already exists, stop it first: `docker stop engram && docker rm engram`
 
 **Done when:** Portainer shows `engram` stack as running (green).
 
-### 8. Verify the Deployment
+### 9. Verify the Deployment
 
 From the LXC host:
 
@@ -247,8 +261,8 @@ scp -r ~/.openclaw/workspace/* root@<LXC-IP>:/opt/engram/workspace/
 **Problem:** Slack doesn't connect ("socket closed" in logs)
 **Fix:** Check `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in `/opt/engram/config/.env` and verify LXC has outbound internet. Restart the container.
 
-**Problem:** Claude CLI returns "unauthorized" or "session expired"
-**Fix:** Get a fresh `CLAUDE_AI_SESSION_KEY` from macOS (`claude auth status`), update the env var in Portainer stack settings, redeploy.
+**Problem:** Claude CLI returns "Not logged in" or "Please run /login"
+**Fix:** Generate a new OAuth token on your Mac: `claude setup-token`. Copy the `sk-ant-oat01-...` token and update `CLAUDE_CODE_OAUTH_TOKEN` in Portainer stack settings, redeploy. The token is valid for 1 year.
 
 **Problem:** Memory flush not saving to Notion
 **Fix:** Verify Google/Notion credentials in `/opt/engram/config/.env`. Check logs: `docker logs engram | grep -i "notion\|google\|error"`

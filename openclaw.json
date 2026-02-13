@@ -1,13 +1,7 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.2.10",
-    "lastTouchedAt": "2026-02-12T04:28:52.351Z"
-  },
-  "wizard": {
-    "lastRunAt": "2026-02-12T04:07:57.730Z",
-    "lastRunVersion": "2026.2.10",
-    "lastRunCommand": "doctor",
-    "lastRunMode": "local"
+    "lastTouchedVersion": "2026.2.13",
+    "lastTouchedAt": "2026-02-13T12:00:00.000Z"
   },
   "logging": {
     "level": "info",
@@ -16,7 +10,7 @@
   "models": {
     "providers": {
       "ollama": {
-        "baseUrl": "http://10.0.254.23:11434/v1",
+        "baseUrl": "http://host.docker.internal:11434/v1",
         "api": "openai-completions",
         "models": []
       }
@@ -30,7 +24,7 @@
           "claude-cli/sonnet"
         ]
       },
-      "workspace": "/Users/wayneerikson/.openclaw/workspace",
+      "workspace": "~/.openclaw/workspace",
       "userTimezone": "America/Chicago",
       "timeFormat": "12",
       "contextTokens": 200000,
@@ -105,9 +99,9 @@
     }
   },
   "gateway": {
-    "port": 3377,
+    "port": 18789,
     "mode": "local",
-    "bind": "loopback",
+    "bind": "lan",
     "auth": {
       "mode": "token"
     }
@@ -118,7 +112,7 @@
   "skills": {
     "load": {
       "extraDirs": [
-        "~/Documents/dev/SecondBrain/.claude/skills"
+        "~/.openclaw/workspace/skills"
       ],
       "watch": true
     }
